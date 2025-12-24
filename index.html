@@ -6,6 +6,8 @@
   <title>EMBRACE SIGNAL — X16 Instrument</title>
   <style>
     :root{
+      --headerH:74px;
+      --sheetPeek:72px;
       --bg:#070A10;
       --bg2:#0A0E18;
       --panel:rgba(255,255,255,.06);
@@ -54,6 +56,9 @@
     }
 
     header{
+      position: sticky;
+      top: 0;
+      z-index: 60;
       display:flex;
       align-items:center;
       justify-content:space-between;
@@ -415,7 +420,7 @@
       justify-content:center;
       background: rgba(0,0,0,.62);
       backdrop-filter: blur(12px);
-      z-index: 50;
+      z-index: 120;
     }
     #configModal.open{display:flex;}
     .modal{
@@ -467,6 +472,157 @@
       line-height:1.35;
     }
 
+
+    /* Mobile helpers */
+    .mobileOnly{display:none;}
+
+    #sheetScrim{
+      display:none;
+      position:fixed;
+      inset:0;
+      background: rgba(0,0,0,.48);
+      backdrop-filter: blur(6px);
+      z-index: 54; /* under header (60) and sheet (58+) */
+    }
+
+    .sheetHandle{
+      display:none;
+      width: 44px;
+      height: 5px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.22);
+      margin: 2px auto 10px;
+      box-shadow: 0 1px 0 rgba(0,0,0,.35) inset;
+      cursor: pointer;
+      user-select:none;
+      touch-action: pan-y;
+    }
+
+    @media (max-width: 680px){
+      :root{
+        --headerH: 86px;
+        --sheetPeek: 78px;
+      }
+
+      html,body{overflow:hidden;}
+      .app{grid-template-rows: var(--headerH) 1fr;}
+
+      header{
+        padding: 10px 12px;
+        gap:10px;
+        flex-direction:column;
+        align-items:stretch;
+        justify-content:center;
+      }
+      .brand{min-width: unset;}
+      .brand .title{gap:8px;}
+      .brand h1{font-size: .92rem; letter-spacing: 2px;}
+      /* Hide the second tag (INSTRUMENT) to reduce clutter on phones */
+      .brand .title .tag:last-child{display:none;}
+      #status{
+        max-width: 100%;
+        font-size: .72rem;
+        opacity:.75;
+        display:-webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow:hidden;
+      }
+
+      .actions{
+        width:100%;
+        justify-content:space-between;
+        gap:8px;
+      }
+      .pill{padding: 8px 10px;}
+      button{padding: 12px 14px; border-radius: 14px;}
+      button#startBtn, button#stopBtn{flex:1; min-width: 0;}
+      button#configBtn{flex:0 0 auto;}
+      .mobileOnly{display:inline-flex;}
+
+      .main{
+        display:block;
+        padding: 0;
+        gap: 0;
+        height: calc(100svh - var(--headerH));
+        height: calc(100vh - var(--headerH));
+      }
+      .stage{
+        height: calc(100svh - var(--headerH));
+        height: calc(100vh - var(--headerH));
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+      }
+
+      /* Keep overlays smaller so the face is usable */
+      .telemetry{
+        left: 12px;
+        top: 12px;
+        padding: 10px 10px;
+        width: min(300px, 86vw);
+        border-radius: 16px;
+      }
+      .telemetry .row{font-size: .74rem; margin-bottom: 8px;}
+      .meter{width: 160px;}
+
+      /* Bottom sheet controls */
+      .side{
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: min(78vh, 640px);
+        border-radius: 22px 22px 0 0;
+        transform: translateY(calc(100% - var(--sheetPeek)));
+        transition: transform .22s ease;
+        z-index: 58;
+        box-shadow: 0 30px 110px rgba(0,0,0,.70);
+      }
+      body.sheet-open .side{transform: translateY(0);}
+      body.sheet-open #sheetScrim{display:block;}
+
+      .sheetHandle{display:block;}
+
+      .side .top{
+        position: sticky;
+        top: 0;
+        background: rgba(0,0,0,.60);
+        backdrop-filter: blur(12px);
+        z-index: 2;
+        padding: 10px 14px 12px;
+      }
+      .side .top h2{font-size: .86rem;}
+      .side .top .sub{display:none;} /* declutter */
+      #testBtn{padding: 10px 12px;}
+
+      .pane{
+        padding: 12px 14px 18px;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      /* Make controls friendlier to thumbs */
+      input[type="range"]{height: 34px;}
+      .modes{grid-template-columns: 1fr 1fr 1fr;}
+      .modebtn{padding: 12px 10px; font-size: .72rem;}
+      .rowbtns button{min-width: 0;}
+
+      /* Vest preview slightly smaller */
+      .vest{width: 148px;}
+      .cell{height: 20px;}
+
+      /* Hide the four HUD corners on tiny screens */
+      .hud .corner{display:none;}
+    }
+
+    /* Reduce motion for users who prefer it */
+    @media (prefers-reduced-motion: reduce){
+      *{scroll-behavior:auto !important;}
+      .side{transition:none !important;}
+      button{transition:none !important;}
+      .fill{transition:none !important;}
+    }
+
     #video{display:none;}
   </style>
 </head>
@@ -490,8 +646,11 @@
         <button id="configBtn" class="secondary">CONFIG</button>
         <button id="startBtn">START</button>
         <button id="stopBtn" class="danger" style="display:none;">STOP</button>
+        <button id="controlsBtn" class="secondary mobileOnly" aria-expanded="false">CONTROLS</button>
       </div>
     </header>
+
+    <div id="sheetScrim" aria-hidden="true"></div>
 
     <div class="main">
       <div class="stage">
@@ -523,6 +682,7 @@
 
       <aside class="side">
         <div class="top">
+          <div id="sheetHandle" class="sheetHandle" role="button" tabindex="0" aria-label="Toggle controls panel"></div>
           <div>
             <h2>Instrument Rack</h2>
             <div class="sub">Tune the instrument. Preview the hug on X16.</div>
@@ -679,6 +839,11 @@
   const configBtn = document.getElementById("configBtn");
   const testBtn = document.getElementById("testBtn");
 
+  // Mobile controls sheet
+  const controlsBtn = document.getElementById("controlsBtn");
+  const sheetScrim = document.getElementById("sheetScrim");
+  const sheetHandle = document.getElementById("sheetHandle");
+
   const bhDot = document.getElementById("bhDot");
   const bhLabel = document.getElementById("bhLabel");
 
@@ -747,7 +912,67 @@
   function saveCfg(next){
     cfg = { ...defaultCfg, ...next };
     localStorage.setItem(LS_KEY, JSON.stringify(cfg));
-    syncBhBadge();
+  
+  syncBhBadge();
+
+  // --- Mobile bottom-sheet (controls) ---
+  let sheetOpen = false;
+
+  function setSheetOpen(next){
+    sheetOpen = !!next;
+    document.body.classList.toggle("sheet-open", sheetOpen);
+    if (controlsBtn){
+      controlsBtn.setAttribute("aria-expanded", sheetOpen ? "true" : "false");
+      controlsBtn.textContent = sheetOpen ? "HIDE" : "CONTROLS";
+    }
+    if (sheetScrim) sheetScrim.setAttribute("aria-hidden", sheetOpen ? "false" : "true");
+  }
+
+  function toggleSheet(){ setSheetOpen(!sheetOpen); }
+
+  // Button + scrim
+  controlsBtn?.addEventListener("click", toggleSheet);
+  sheetScrim?.addEventListener("click", ()=>setSheetOpen(false));
+
+  // Handle (tap + keyboard)
+  sheetHandle?.addEventListener("click", toggleSheet);
+  sheetHandle?.addEventListener("keydown", (e)=>{
+    if (e.key === "Enter" || e.key === " "){ e.preventDefault(); toggleSheet(); }
+  });
+
+  // Swipe down to close / up to open (lightweight)
+  (function(){
+    if (!sheetHandle) return;
+    let y0 = null;
+    let moved = false;
+
+    sheetHandle.addEventListener("touchstart", (e)=>{
+      if (!e.touches?.length) return;
+      y0 = e.touches[0].clientY;
+      moved = false;
+    }, {passive:true});
+
+    sheetHandle.addEventListener("touchmove", (e)=>{
+      if (y0 == null || !e.touches?.length) return;
+      const dy = e.touches[0].clientY - y0;
+      if (Math.abs(dy) > 14) moved = true;
+      if (dy > 44){ setSheetOpen(false); y0 = null; }
+      if (dy < -44){ setSheetOpen(true); y0 = null; }
+    }, {passive:true});
+
+    sheetHandle.addEventListener("touchend", ()=>{
+      if (y0 == null) return;
+      if (!moved) toggleSheet();
+      y0 = null;
+    });
+  })();
+
+  // Default: keep controls collapsed on phones
+  try{
+    if (window.matchMedia && window.matchMedia("(max-width: 680px)").matches){
+      setSheetOpen(false);
+    }
+  }catch{}
   }
 
   function syncBhBadge(){
@@ -1087,6 +1312,9 @@
     trigLabel.textContent = "—";
 
     try{
+      // On phones, close the controls sheet once we go live so the camera view has room.
+      try{ if (window.matchMedia && window.matchMedia("(max-width: 680px)").matches) setSheetOpen(false); }catch{}
+
       bhPreviewOnly = false;
       try{
         initBhapticsOrThrow();
