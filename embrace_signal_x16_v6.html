@@ -1,0 +1,1261 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>EMBRACE SIGNAL — X16 Instrument</title>
+  <style>
+    :root{
+      --bg:#070A10;
+      --bg2:#0A0E18;
+      --panel:rgba(255,255,255,.06);
+      --panel2:rgba(0,0,0,.55);
+      --line:rgba(255,255,255,.10);
+      --text:#E6E6E6;
+      --muted:rgba(230,230,230,.65);
+      --accent:#00FFA2;
+      --accent2:#40C8FF;
+      --danger:#ff4d6d;
+      --warn:#ffd166;
+      --shadow: 0 22px 80px rgba(0,0,0,.55);
+      --radius: 18px;
+      --radius2: 14px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+    }
+
+    *{box-sizing:border-box;}
+    html,body{height:100%;margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);overflow:hidden;}
+
+    /* Subtle scanline + noise */
+    body:before{
+      content:"";
+      position:fixed; inset:0;
+      pointer-events:none;
+      background:
+        linear-gradient(to bottom, rgba(255,255,255,.03), transparent 22%),
+        repeating-linear-gradient(to bottom, rgba(255,255,255,.03) 0px, rgba(255,255,255,.03) 1px, transparent 2px, transparent 6px);
+      mix-blend-mode: overlay;
+      opacity:.22;
+    }
+    body:after{
+      content:"";
+      position:fixed; inset:0;
+      pointer-events:none;
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='.25'/%3E%3C/svg%3E");
+      opacity:.06;
+    }
+
+    .app{
+      height:100%;
+      display:grid;
+      grid-template-rows: 74px 1fr;
+      grid-template-columns: 1fr;
+    }
+
+    header{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:14px;
+      padding: 14px 16px;
+      border-bottom:1px solid var(--line);
+      background: rgba(0,0,0,.35);
+      backdrop-filter: blur(12px);
+    }
+
+    .brand{
+      display:flex; flex-direction:column; gap:2px;
+      min-width: 260px;
+    }
+    .brand .title{
+      display:flex; align-items:baseline; gap:10px; flex-wrap:wrap;
+    }
+    .brand h1{
+      margin:0;
+      font-size: 0.98rem;
+      letter-spacing: 2.2px;
+      text-transform: uppercase;
+      font-weight: 800;
+    }
+    .tag{
+      font-family:var(--mono);
+      font-size:.72rem;
+      padding: 4px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(0,255,162,.35);
+      background: rgba(0,255,162,.08);
+      color: rgba(200,255,236,.95);
+      letter-spacing: .4px;
+      opacity: .95;
+    }
+    #status{
+      font-family:var(--mono);
+      font-size: .78rem;
+      opacity:.72;
+      line-height:1.25;
+      word-break: break-word;
+      max-width: min(720px, 55vw);
+    }
+
+    .actions{
+      display:flex; align-items:center; gap:10px; flex-wrap:wrap; justify-content:flex-end;
+    }
+
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding: 8px 10px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.10);
+      font-family:var(--mono);
+      font-size: .76rem;
+      letter-spacing: .2px;
+      opacity:.96;
+      user-select:none;
+    }
+    .dot{width:9px;height:9px;border-radius:50%;
+      background: rgba(255,255,255,.35);
+      box-shadow: 0 0 0 2px rgba(0,0,0,.55) inset, 0 0 12px rgba(0,0,0,.35);
+    }
+    .dot.ok{background: var(--accent); box-shadow: 0 0 0 2px rgba(0,0,0,.55) inset, 0 0 18px rgba(0,255,162,.35);}
+    .dot.bad{background: var(--danger); box-shadow: 0 0 0 2px rgba(0,0,0,.55) inset, 0 0 18px rgba(255,77,109,.35);}
+
+    button{
+      border:none;
+      padding: 10px 14px;
+      border-radius: 12px;
+      cursor:pointer;
+      font-weight: 850;
+      letter-spacing: .6px;
+      background: var(--accent);
+      color: #000;
+      transition: transform .08s ease, filter .12s ease, box-shadow .12s ease;
+      user-select:none;
+      box-shadow: 0 10px 30px rgba(0,255,162,.10);
+    }
+    button:active{transform: translateY(1px);}
+    button.secondary{
+      background: rgba(255,255,255,.08);
+      border: 1px solid rgba(255,255,255,.12);
+      color: var(--text);
+      font-weight: 750;
+      box-shadow:none;
+    }
+    button.danger{
+      background: rgba(255,77,109,.12);
+      border: 1px solid rgba(255,77,109,.35);
+      color: #ffd5dd;
+      font-weight: 800;
+      box-shadow:none;
+    }
+
+    .main{
+      height:100%;
+      display:grid;
+      grid-template-columns: 1fr 360px;
+      gap: 12px;
+      padding: 12px;
+    }
+    @media (max-width: 980px){
+      .main{ grid-template-columns: 1fr; grid-template-rows: 1fr auto; }
+      .side{ height: 320px; }
+    }
+
+    .stage{
+      position:relative;
+      border-radius: var(--radius);
+      background:
+        radial-gradient(circle at 30% 30%, rgba(0,255,162,.08), transparent 55%),
+        radial-gradient(circle at 75% 55%, rgba(64,200,255,.08), transparent 55%),
+        linear-gradient(180deg, rgba(255,255,255,.03), rgba(0,0,0,.0));
+      border: 1px solid var(--line);
+      overflow:hidden;
+      box-shadow: var(--shadow);
+    }
+
+    #faceCanvas{
+      position:absolute;
+      left:50%;
+      top:50%;
+      transform:translate(-50%,-50%);
+      width:100%;
+      height:100%;
+      display:block;
+    }
+
+    /* HUD overlays on stage */
+    .hud{
+      position:absolute; inset:0;
+      pointer-events:none;
+    }
+    .hud .corner{
+      position:absolute;
+      width: 26px; height: 26px;
+      border: 2px solid rgba(0,255,162,.35);
+      opacity:.8;
+    }
+    .hud .corner.tl{left:14px;top:14px;border-right:none;border-bottom:none;border-top-left-radius:12px;}
+    .hud .corner.tr{right:14px;top:14px;border-left:none;border-bottom:none;border-top-right-radius:12px;}
+    .hud .corner.bl{left:14px;bottom:14px;border-right:none;border-top:none;border-bottom-left-radius:12px;}
+    .hud .corner.br{right:14px;bottom:14px;border-left:none;border-top:none;border-bottom-right-radius:12px;}
+
+    .telemetry{
+      position:absolute;
+      left: 18px;
+      top: 18px;
+      background: rgba(0,0,0,.40);
+      border: 1px solid rgba(255,255,255,.10);
+      border-radius: 16px;
+      padding: 14px;
+      width: min(340px, 44vw);
+      backdrop-filter: blur(12px);
+      pointer-events:none;
+    }
+    .telemetry .row{
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+      font-family: var(--mono);
+      font-size: .78rem;
+      letter-spacing:.2px;
+      opacity:.92;
+      margin-bottom: 10px;
+    }
+    .telemetry .row:last-child{margin-bottom:0;}
+    .kv{opacity:.72;}
+    .meter{
+      height:8px; width: 180px; max-width: 44%;
+      background: rgba(255,255,255,.10);
+      border-radius:999px;
+      overflow:hidden;
+      border:1px solid rgba(255,255,255,.08);
+    }
+    .fill{height:100%; width:0%; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius:999px; transition: width .08s;}
+    .sig{
+      display:inline-flex; align-items:center; gap:8px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.05);
+      font-family: var(--mono);
+      font-size: .75rem;
+      opacity:.92;
+    }
+
+    /* Side panel */
+    .side{
+      border-radius: var(--radius);
+      background: rgba(0,0,0,.35);
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+      display:flex;
+      flex-direction:column;
+    }
+    .side .top{
+      padding: 14px 14px 12px;
+      border-bottom: 1px solid var(--line);
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:10px;
+    }
+    .side .top h2{
+      margin:0;
+      font-size: .9rem;
+      letter-spacing: 1.6px;
+      text-transform:uppercase;
+      font-weight: 850;
+    }
+    .side .top .sub{
+      margin:6px 0 0;
+      font-family: var(--mono);
+      font-size:.72rem;
+      opacity:.72;
+      line-height:1.35;
+    }
+
+    .pane{
+      padding: 12px 14px 14px;
+      overflow:auto;
+    }
+    .section{
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.04);
+      border-radius: 16px;
+      padding: 12px;
+      margin-bottom: 12px;
+    }
+    .section:last-child{margin-bottom:0;}
+    .section-title{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      margin-bottom: 10px;
+    }
+    .section-title .name{
+      font-family: var(--mono);
+      font-size:.78rem;
+      letter-spacing:.8px;
+      text-transform:uppercase;
+      opacity:.86;
+    }
+    .hint{
+      font-family: var(--mono);
+      font-size:.72rem;
+      opacity:.62;
+      line-height:1.35;
+    }
+
+    .field{margin-bottom:10px;}
+    .field:last-child{margin-bottom:0;}
+    label{
+      display:flex;
+      align-items:baseline;
+      justify-content:space-between;
+      gap:10px;
+      font-family: var(--mono);
+      font-size:.72rem;
+      text-transform:uppercase;
+      letter-spacing:.7px;
+      opacity:.75;
+      margin-bottom:6px;
+    }
+    input[type="text"], input[type="password"]{
+      width:100%;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.06);
+      color: var(--text);
+      outline:none;
+      font-family: var(--mono);
+      font-size:.85rem;
+    }
+    input[type="text"]:focus, input[type="password"]:focus{
+      border-color: rgba(0,255,162,.55);
+      box-shadow: 0 0 0 3px rgba(0,255,162,.10);
+    }
+
+    input[type="range"]{
+      width:100%;
+      accent-color: var(--accent);
+    }
+
+    .rowbtns{display:flex; gap:10px; flex-wrap:wrap;}
+    .rowbtns button{flex:1; min-width: 120px;}
+
+    .modes{
+      display:grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+    }
+    .modebtn{
+      padding: 10px 10px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.06);
+      color: var(--text);
+      font-weight: 850;
+      letter-spacing: .8px;
+      text-transform:uppercase;
+      font-size: .72rem;
+      cursor:pointer;
+      user-select:none;
+      transition: filter .12s ease, transform .08s ease;
+      font-family: var(--mono);
+    }
+    .modebtn:active{transform: translateY(1px);}
+    .modebtn.active{
+      border-color: rgba(0,255,162,.45);
+      background: rgba(0,255,162,.10);
+      box-shadow: 0 0 0 3px rgba(0,255,162,.08);
+    }
+
+    /* X16 vest preview */
+    .vest-wrap{
+      display:flex;
+      gap: 12px;
+      align-items:center;
+      justify-content:space-between;
+    }
+    .vest{
+      display:grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+      padding: 10px;
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.35);
+      width: 168px;
+    }
+    .cell{
+      height: 22px;
+      border-radius: 8px;
+      background: rgba(255,255,255,.08);
+      border: 1px solid rgba(255,255,255,.10);
+      box-shadow: 0 6px 18px rgba(0,0,0,.25);
+      transition: filter .12s ease, transform .08s ease, background .12s ease, box-shadow .12s ease;
+    }
+    .cell.on{
+      background: rgba(0,255,162,.35);
+      border-color: rgba(0,255,162,.55);
+      box-shadow: 0 0 22px rgba(0,255,162,.20);
+      filter: brightness(1.05);
+      transform: translateY(-1px);
+    }
+
+    /* Config modal */
+    #configModal{
+      position:fixed; inset:0;
+      display:none;
+      align-items:center;
+      justify-content:center;
+      background: rgba(0,0,0,.62);
+      backdrop-filter: blur(12px);
+      z-index: 50;
+    }
+    #configModal.open{display:flex;}
+    .modal{
+      width: min(640px, 92vw);
+      border-radius: 18px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(10,12,18,.90);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .modal-h{
+      padding: 14px 16px;
+      border-bottom: 1px solid rgba(255,255,255,.10);
+      display:flex; align-items:flex-start; justify-content:space-between; gap:12px;
+    }
+    .modal-h h3{
+      margin:0;
+      font-size: .95rem;
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+      font-weight: 900;
+    }
+    .modal-h .p{
+      margin-top:6px;
+      font-family: var(--mono);
+      font-size:.75rem;
+      opacity:.70;
+      line-height:1.35;
+    }
+    .modal-b{padding: 14px 16px 16px;}
+    .grid{
+      display:grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+    @media (min-width: 700px){
+      .grid{ grid-template-columns: 1fr 1fr; }
+      .grid .full{ grid-column: 1 / -1; }
+    }
+    .modal-actions{
+      display:flex; gap:10px; flex-wrap:wrap; margin-top: 12px;
+    }
+    .modal-actions button{flex:1; min-width: 130px;}
+    .note{
+      margin-top: 10px;
+      font-family: var(--mono);
+      font-size:.74rem;
+      opacity:.66;
+      line-height:1.35;
+    }
+
+    #video{display:none;}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div class="brand">
+        <div class="title">
+          <h1>EMBRACE SIGNAL</h1>
+          <span class="tag">X16</span>
+          <span class="tag" style="border-color: rgba(64,200,255,.35); background: rgba(64,200,255,.08); color: rgba(210,242,255,.95);">INSTRUMENT</span>
+        </div>
+        <div id="status">Boot: ready. Link bHaptics → start the instrument.</div>
+      </div>
+
+      <div class="actions">
+        <span class="pill" title="bHaptics status">
+          <span id="bhDot" class="dot"></span>
+          <span id="bhLabel">bHaptics: not linked</span>
+        </span>
+        <button id="configBtn" class="secondary">CONFIG</button>
+        <button id="startBtn">START</button>
+        <button id="stopBtn" class="danger" style="display:none;">STOP</button>
+      </div>
+    </header>
+
+    <div class="main">
+      <div class="stage">
+        <canvas id="faceCanvas"></canvas>
+        <div class="hud">
+          <div class="corner tl"></div><div class="corner tr"></div><div class="corner bl"></div><div class="corner br"></div>
+        </div>
+
+        <div class="telemetry">
+          <div class="row">
+            <span class="kv">BLINK</span>
+            <div class="meter"><div id="blinkFill" class="fill"></div></div>
+            <span id="blinkVal">0%</span>
+          </div>
+          <div class="row">
+            <span class="kv">SMILE</span>
+            <div class="meter"><div id="smileFill" class="fill"></div></div>
+            <span id="smileVal">0%</span>
+          </div>
+          <div class="row">
+            <span class="sig"><span style="opacity:.7;">MODE</span> <span id="modeLabel">GALLERY</span></span>
+            <span class="sig"><span style="opacity:.7;">FPS</span> <span id="fpsLabel">—</span></span>
+            <span class="sig"><span style="opacity:.7;">TRIG</span> <span id="trigLabel">—</span></span>
+          </div>
+        </div>
+
+        <video id="video" playsinline muted></video>
+      </div>
+
+      <aside class="side">
+        <div class="top">
+          <div>
+            <h2>Instrument Rack</h2>
+            <div class="sub">Tune the instrument. Preview the hug on X16.</div>
+          </div>
+          <button id="testBtn" class="secondary" style="padding:10px 12px;border-radius:14px;">TEST</button>
+        </div>
+
+        <div class="pane">
+          <div class="section">
+            <div class="section-title">
+              <div class="name">Performance Mode</div>
+              <div class="hint">Presets for feel + pacing.</div>
+            </div>
+            <div class="modes">
+              <div class="modebtn" data-mode="WHISPER">WHISPER</div>
+              <div class="modebtn active" data-mode="GALLERY">GALLERY</div>
+              <div class="modebtn" data-mode="CLUB">CLUB</div>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">
+              <div class="name">X16 Preview</div>
+              <div class="hint">Lights where the pulse lands.</div>
+            </div>
+            <div class="vest-wrap">
+              <div class="vest" id="vestGrid" aria-label="X16 haptics preview grid"></div>
+              <div class="hint" style="max-width:140px;">
+                4×4 map (top→bottom).<br>
+                Strong pulses read best on X16.
+              </div>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">
+              <div class="name">Detection</div>
+              <div class="hint">Adjust if your face / lighting differs.</div>
+            </div>
+
+            <div class="field">
+              <label>blink threshold <span id="blinkThV">0.62</span></label>
+              <input id="blinkTh" type="range" min="0.20" max="0.95" step="0.01" value="0.62">
+            </div>
+            <div class="field">
+              <label>smile threshold <span id="smileThV">0.52</span></label>
+              <input id="smileTh" type="range" min="0.20" max="0.95" step="0.01" value="0.52">
+            
+            <div class="rowbtns" style="margin-top:10px;">
+              <button id="calBtn" class="secondary">CALIBRATE</button>
+            </div>
+            <div class="hint" style="margin-top:8px;">
+              Calibration: look at camera, blink twice, then smile once. We’ll set thresholds from the peak values.
+            </div>
+</div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">
+              <div class="name">Haptics</div>
+              <div class="hint">Strength + timing.</div>
+            </div>
+
+            <div class="field">
+              <label>blink intensity <span id="bIntV">92</span></label>
+              <input id="bInt" type="range" min="10" max="100" step="1" value="92">
+            </div>
+            <div class="field">
+              <label>blink duration (ms) <span id="bDurV">120</span></label>
+              <input id="bDur" type="range" min="40" max="260" step="5" value="120">
+            </div>
+            <div class="field">
+              <label>smile intensity <span id="sIntV">62</span></label>
+              <input id="sInt" type="range" min="10" max="100" step="1" value="62">
+            </div>
+            <div class="field">
+              <label>smile speed <span id="sSpdV">55</span></label>
+              <input id="sSpd" type="range" min="30" max="110" step="1" value="55">
+            </div>
+            <div class="field">
+              <label>smile cooldown (ms) <span id="sCdV">650</span></label>
+              <input id="sCd" type="range" min="200" max="1800" step="25" value="650">
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">
+              <div class="name">bHaptics Link</div>
+              <div class="hint">Keys stored locally in this browser.</div>
+            </div>
+
+            <div class="rowbtns">
+              <button id="openConfigBtn" class="secondary">EDIT KEYS</button>
+              <button id="clearKeysBtn" class="secondary">CLEAR</button>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <!-- CONFIG MODAL -->
+  <div id="configModal" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true">
+      <div class="modal-h">
+        <div>
+          <h3>bHaptics Connection</h3>
+          <div class="p">Paste your <b>App ID</b> + <b>API Key</b> from the bHaptics Developer Portal. Optional Remote if your Player is on another machine.</div>
+        </div>
+        <button id="closeConfigBtn" class="secondary" style="padding:10px 12px;border-radius:14px;">Close</button>
+      </div>
+      <div class="modal-b">
+        <div class="grid">
+          <div>
+            <label>app id</label>
+            <input id="appIdInput" type="text" placeholder="your_app_id" autocomplete="off">
+          </div>
+          <div>
+            <label>api key</label>
+            <input id="apiKeyInput" type="password" placeholder="your_api_key" autocomplete="off">
+          </div>
+          <div class="full">
+            <label>remote (optional)</label>
+            <input id="remoteInput" type="text" placeholder="e.g. 192.168.0.123:15881 (leave blank for localhost)" autocomplete="off">
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button id="saveConfigBtn">SAVE</button>
+          <button id="testHapticsBtn" class="secondary">TEST PULSE</button>
+          <button id="clearConfigBtn" class="danger">CLEAR KEYS</button>
+        </div>
+        <div class="note">
+          Tip: if you feel nothing, confirm the <b>bHaptics Player</b> app is running and the vest is connected.
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script type="module">
+  import * as vision from "https://esm.sh/@mediapipe/tasks-vision@0.10.14";
+  const { FaceLandmarker, FilesetResolver, DrawingUtils } = vision;
+
+  import Tact, { PositionType } from "https://esm.sh/tact-js@2.0.4";
+
+  // Elements
+  const video = document.getElementById("video");
+  const canvas = document.getElementById("faceCanvas");
+  const stage = document.querySelector(".stage");
+  const ctx = canvas.getContext("2d", { alpha: true });
+
+  const statusTxt = document.getElementById("status");
+  const startBtn = document.getElementById("startBtn");
+  const stopBtn = document.getElementById("stopBtn");
+  const configBtn = document.getElementById("configBtn");
+  const testBtn = document.getElementById("testBtn");
+
+  const bhDot = document.getElementById("bhDot");
+  const bhLabel = document.getElementById("bhLabel");
+
+  const blinkFill = document.getElementById("blinkFill");
+  const smileFill = document.getElementById("smileFill");
+  const blinkVal = document.getElementById("blinkVal");
+  const smileVal = document.getElementById("smileVal");
+  const fpsLabel  = document.getElementById("fpsLabel");
+  const modeLabel = document.getElementById("modeLabel");
+  const trigLabel = document.getElementById("trigLabel");
+
+  // Sliders
+  const blinkTh = document.getElementById("blinkTh");
+  const smileTh = document.getElementById("smileTh");
+  const bInt = document.getElementById("bInt");
+  const bDur = document.getElementById("bDur");
+  const sInt = document.getElementById("sInt");
+  const sSpd = document.getElementById("sSpd");
+  const sCd  = document.getElementById("sCd");
+  const calBtn = document.getElementById("calBtn");
+
+  const blinkThV = document.getElementById("blinkThV");
+  const smileThV = document.getElementById("smileThV");
+  const bIntV = document.getElementById("bIntV");
+  const bDurV = document.getElementById("bDurV");
+  const sIntV = document.getElementById("sIntV");
+  const sSpdV = document.getElementById("sSpdV");
+  const sCdV  = document.getElementById("sCdV");
+
+  // Keys panel buttons
+  const openConfigBtn = document.getElementById("openConfigBtn");
+  const clearKeysBtn  = document.getElementById("clearKeysBtn");
+
+  // Modal
+  const configModal = document.getElementById("configModal");
+  const closeConfigBtn = document.getElementById("closeConfigBtn");
+  const saveConfigBtn  = document.getElementById("saveConfigBtn");
+  const clearConfigBtn = document.getElementById("clearConfigBtn");
+  const testHapticsBtn = document.getElementById("testHapticsBtn");
+  const appIdInput = document.getElementById("appIdInput");
+  const apiKeyInput = document.getElementById("apiKeyInput");
+  const remoteInput = document.getElementById("remoteInput");
+
+  // Vest preview grid
+  const vestGrid = document.getElementById("vestGrid");
+  const vestCells = [];
+  for (let i=0; i<16; i++){
+    const c = document.createElement("div");
+    c.className = "cell";
+    vestGrid.appendChild(c);
+    vestCells.push(c);
+  }
+
+  // Persistent config
+  const LS_KEY = "faceHapticsHub.bhaptics";
+  const defaultCfg = { appId: "", apiKey: "", remote: "" };
+  let cfg = loadCfg();
+
+  function loadCfg(){
+    try{
+      const raw = localStorage.getItem(LS_KEY);
+      if (!raw) return { ...defaultCfg };
+      return { ...defaultCfg, ...(JSON.parse(raw) || {}) };
+    }catch{ return { ...defaultCfg }; }
+  }
+  function saveCfg(next){
+    cfg = { ...defaultCfg, ...next };
+    localStorage.setItem(LS_KEY, JSON.stringify(cfg));
+    syncBhBadge();
+  }
+
+  function syncBhBadge(){
+    const ok = !!(cfg.appId && cfg.apiKey);
+    bhDot.classList.toggle("ok", ok);
+    bhDot.classList.toggle("bad", !ok);
+    bhLabel.textContent = ok ? "bHaptics: keys set" : "bHaptics: not linked";
+  }
+  syncBhBadge();
+
+  // Modal controls
+  function openConfig(){
+    cfg = loadCfg();
+    appIdInput.value = cfg.appId || "";
+    apiKeyInput.value = cfg.apiKey || "";
+    remoteInput.value = cfg.remote || "";
+    configModal.classList.add("open");
+    configModal.setAttribute("aria-hidden", "false");
+  }
+  function closeConfig(){
+    configModal.classList.remove("open");
+    configModal.setAttribute("aria-hidden", "true");
+  }
+  configBtn.addEventListener("click", openConfig);
+  openConfigBtn.addEventListener("click", openConfig);
+  closeConfigBtn.addEventListener("click", closeConfig);
+  configModal.addEventListener("click", (e)=>{ if(e.target === configModal) closeConfig(); });
+  window.addEventListener("keydown", (e)=>{ if(e.key==="Escape" && configModal.classList.contains("open")) closeConfig(); });
+
+  saveConfigBtn.addEventListener("click", ()=>{
+    saveCfg({
+      appId: appIdInput.value.trim(),
+      apiKey: apiKeyInput.value.trim(),
+      remote: remoteInput.value.trim()
+    });
+    statusTxt.textContent = "Saved bHaptics keys.";
+    closeConfig();
+  });
+
+  function clearKeys(){
+    localStorage.removeItem(LS_KEY);
+    cfg = loadCfg();
+    appIdInput.value = "";
+    apiKeyInput.value = "";
+    remoteInput.value = "";
+    syncBhBadge();
+    statusTxt.textContent = "Cleared bHaptics keys.";
+  }
+  clearConfigBtn.addEventListener("click", ()=>{ clearKeys(); });
+  clearKeysBtn.addEventListener("click", ()=>{ clearKeys(); });
+
+  // Helpers
+  const clamp = (v,min,max)=>Math.max(min, Math.min(max, v));
+  const sleep = (ms)=>new Promise(r=>setTimeout(r, ms));
+  // Fit canvas to stage without stretching (keeps camera aspect ratio)
+  function fitCanvasToStage(){
+    if (!video?.videoWidth || !video?.videoHeight) return;
+    const sw = stage?.clientWidth || canvas.parentElement.clientWidth;
+    const sh = stage?.clientHeight || canvas.parentElement.clientHeight;
+    const vw = video.videoWidth;
+    const vh = video.videoHeight;
+    const scale = Math.min(sw / vw, sh / vh);
+    canvas.style.width  = Math.round(vw * scale) + "px";
+    canvas.style.height = Math.round(vh * scale) + "px";
+  }
+  let stageRO = null;
+  try{
+    stageRO = new ResizeObserver(()=>fitCanvasToStage());
+    stageRO.observe(stage);
+  }catch{}
+  window.addEventListener("resize", fitCanvasToStage);
+
+
+  // Slider UI
+  function setLabel(){
+    blinkThV.textContent = (+blinkTh.value).toFixed(2);
+    smileThV.textContent = (+smileTh.value).toFixed(2);
+    bIntV.textContent = Math.round(+bInt.value);
+    bDurV.textContent = Math.round(+bDur.value);
+    sIntV.textContent = Math.round(+sInt.value);
+    sSpdV.textContent = Math.round(+sSpd.value);
+    sCdV.textContent  = Math.round(+sCd.value);
+  }
+  [blinkTh,smileTh,bInt,bDur,sInt,sSpd,sCd].forEach(el=>el.addEventListener("input", setLabel));
+  setLabel();
+
+  // Quick calibration: sets thresholds from peak blink/smile over a short window
+  let calibrating = false;
+  async function calibrate(){
+    if (!running){
+      statusTxt.textContent = "Start the instrument first, then CALIBRATE.";
+      return;
+    }
+    if (calibrating) return;
+    calibrating = true;
+
+    statusTxt.textContent = "Calibrating (3s)… blink twice, then smile once.";
+    let maxB = 0;
+    let maxS = 0;
+
+    const t0 = performance.now();
+    while (performance.now() - t0 < 3200){
+      maxB = Math.max(maxB, lastMetrics.blink || 0);
+      maxS = Math.max(maxS, lastMetrics.smile || 0);
+      await sleep(60);
+    }
+
+    if (maxB < 0.18 || maxS < 0.18){
+      statusTxt.textContent = "Calibration failed: couldn’t see strong blink/smile. Try more light + face centered and try again.";
+      calibrating = false;
+      return;
+    }
+
+    blinkTh.value = clamp(maxB * 0.72, 0.30, 0.88).toFixed(2);
+    smileTh.value = clamp(maxS * 0.65, 0.22, 0.88).toFixed(2);
+    setLabel();
+
+    statusTxt.textContent = `Calibrated. blink threshold ${(+blinkTh.value).toFixed(2)}, smile threshold ${(+smileTh.value).toFixed(2)}.`;
+    calibrating = false;
+  }
+  calBtn?.addEventListener("click", ()=>calibrate().catch(()=>{ calibrating=false; }));
+
+
+  // Modes (preset sets)
+  const modeButtons = Array.from(document.querySelectorAll(".modebtn"));
+  let mode = "GALLERY";
+  let bhInitialized = false; // bHaptics SDK init guard
+  let bhPreviewOnly = false; // run without keys (visual preview only)
+  function applyMode(next){
+    mode = next;
+    modeLabel.textContent = next;
+    modeButtons.forEach(b=>b.classList.toggle("active", b.dataset.mode===next));
+
+    // Presets tuned for X16 feel
+    if (next === "WHISPER"){
+      bInt.value = 70; bDur.value = 95;
+      sInt.value = 48; sSpd.value = 70; sCd.value = 900;
+      blinkTh.value = 0.64; smileTh.value = 0.56;
+    } else if (next === "GALLERY"){
+      bInt.value = 92; bDur.value = 120;
+      sInt.value = 62; sSpd.value = 55; sCd.value = 650;
+      blinkTh.value = 0.62; smileTh.value = 0.52;
+    } else if (next === "CLUB"){
+      bInt.value = 100; bDur.value = 140;
+      sInt.value = 78; sSpd.value = 46; sCd.value = 520;
+      blinkTh.value = 0.60; smileTh.value = 0.48;
+    }
+    setLabel();
+    statusTxt.textContent = `Mode set: ${next}.`;
+  }
+  modeButtons.forEach(b=>b.addEventListener("click", ()=>applyMode(b.dataset.mode)));
+  applyMode("GALLERY");
+
+  // bHaptics init
+  function initBhapticsOrThrow(){
+    // Back-compat: keep the old name, but only initialize once.
+    cfg = loadCfg();
+    if (!cfg.appId || !cfg.apiKey) throw new Error("Missing bHaptics App ID / API Key. Click CONFIG and paste them first.");
+    if (bhInitialized) return;
+    const params = { appId: cfg.appId, apiKey: cfg.apiKey };
+    if (cfg.remote) params.remote = cfg.remote;
+    Tact.init(params);
+    bhInitialized = true;
+  }
+
+  // X16 preview mapping:
+  // Convert normalized x,y (0..1) to nearest 4x4 cell index [row-major]
+  function xyToCell(x,y){
+    const cx = clamp(x,0,1);
+    const cy = clamp(y,0,1);
+    const col = clamp(Math.round(cx*3), 0, 3);
+    const row = clamp(Math.round(cy*3), 0, 3);
+    return row*4 + col;
+  }
+  function flashCells(points, ms=180){
+    const indices = new Set(points.map(p=>xyToCell(p.x, p.y)));
+    indices.forEach(i=>vestCells[i]?.classList.add("on"));
+    setTimeout(()=>indices.forEach(i=>vestCells[i]?.classList.remove("on")), ms);
+  }
+
+  // Haptics: X16 likes clear "pixels"
+  function playPixels(points, intensity, duration){
+    // points: [{x,y,int?}]
+    // If bHaptics isn't linked, still show the visual preview.
+    if (!bhInitialized){
+      flashCells(points, Math.max(140, Math.min(260, duration+60)));
+      return;
+    }
+
+    const xs = points.map(p=>p.x);
+    const ys = points.map(p=>p.y);
+    const ints = points.map(p=>p.int ?? intensity);
+
+    Tact.playPath({
+      position: PositionType.Vest,
+      x: xs,
+      y: ys,
+      intensity: ints.map(v=>Math.round(clamp(v,0,100))),
+      duration: Math.round(duration)
+    });
+
+    flashCells(points, Math.max(140, Math.min(260, duration+60)));
+  }
+
+  // Blink: crisp double-click at center (X16-friendly)
+  function hapticBlink(){
+    const intensity = +bInt.value;
+    const duration  = +bDur.value;
+    const pulse = ()=>playPixels(
+      [
+        {x:0.50, y:0.30, int:intensity},
+        {x:0.50, y:0.42, int:intensity-6}
+      ],
+      intensity,
+      duration
+    );
+    pulse();
+    setTimeout(pulse, 170);
+  }
+
+  // Smile: symmetric "lift" then a short brush
+  let smileGate = false;
+  async function hapticSmile(){
+    if (smileGate) return;
+    smileGate = true;
+
+    // "Warm hug" for X16:
+    // Phase A: gentle surround (left+right + upper-mid)
+    // Phase B: close-in squeeze to center
+    // Phase C: slow heartbeat release
+    //
+    // X16 reads best with fewer, clearer "pixels" and longer durations.
+    const base = +sInt.value;                 // 10..100
+    const speed = +sSpd.value;                // lower = faster (we'll invert to feel like breath)
+    const cooldown = +sCd.value;
+
+    const breathe = clamp(0.9 + (110 - speed) / 220, 0.9, 1.25); // 0.9..1.25
+    const durLong = Math.round(260 * breathe);
+    const durMed  = Math.round(190 * breathe);
+    const durBeat = Math.round(160 * breathe);
+
+    // Helper: play multiple "pixels" at once (hug = surround)
+    const play = (pts, inten, dur) => playPixels(
+      pts.map(p => ({...p, int: p.int ?? inten})),
+      inten,
+      dur
+    );
+
+    // A) Surround: wide arms + a soft "shoulder" touch
+    play(
+      [
+        {x:0.12, y:0.54, int: base*0.92},
+        {x:0.88, y:0.54, int: base*0.92},
+        {x:0.28, y:0.34, int: base*0.70},
+        {x:0.72, y:0.34, int: base*0.70},
+      ],
+      base,
+      durLong
+    );
+    await sleep(Math.round(140 * breathe));
+
+    // B) Close in: mid left/right + center (the squeeze)
+    play(
+      [
+        {x:0.28, y:0.52, int: base*0.98},
+        {x:0.72, y:0.52, int: base*0.98},
+        {x:0.50, y:0.46, int: base*1.05},
+      ],
+      base,
+      durMed
+    );
+    await sleep(Math.round(150 * breathe));
+
+    // C) Heartbeat: two slow center beats + gentle fade
+    const beat = async (k) => {
+      play([{x:0.50, y:0.50, int: base*k}], base, durBeat);
+      await sleep(Math.round(120 * breathe));
+    };
+    await beat(1.08);
+    await sleep(Math.round(90 * breathe));
+    await beat(0.98);
+
+    // Tiny lingering warmth (very soft center glow)
+    play([{x:0.50, y:0.56, int: base*0.52}], base, Math.round(220 * breathe));
+    await sleep(Math.round(260 * breathe));
+
+    await sleep(cooldown);
+    smileGate = false;
+  }
+
+  // TEST buttons
+  function runTestPulse(){
+    // Works even without keys (visual preview only).
+    try{
+      initBhapticsOrThrow();
+      statusTxt.textContent = "Test: sending blink pulse.";
+    }catch(err){
+      statusTxt.textContent = "Test (preview): add bHaptics keys in CONFIG to feel the vest.";
+    }
+    trigLabel.textContent = "TEST";
+    hapticBlink();
+  }
+
+  testBtn.addEventListener("click", runTestPulse);
+  testHapticsBtn.addEventListener("click", runTestPulse);
+
+// Runtime (MediaPipe)
+  let faceLandmarker = null;
+  let rafId = null;
+  let running = false;
+  let lastBlink = 0;
+  let lastFpsT = performance.now();
+  let fpsFrames = 0;
+
+  // Trigger smoothing + hysteresis (reduces false positives)
+  let blinkEma = 0;
+  let smileEma = 0;
+  let blinkArmed = true;
+  let smileArmed = true;
+  let trigTimeout = null;
+  let lastMetrics = { blink: 0, smile: 0 };
+
+  function setTrig(label){
+    trigLabel.textContent = label;
+    if (trigTimeout) clearTimeout(trigTimeout);
+    trigTimeout = setTimeout(()=>{ trigLabel.textContent = "—"; }, 380);
+  }
+
+  function getShapeScore(categories, name){
+    const c = categories.find(x => x.categoryName === name);
+    return c ? c.score : 0;
+  }
+
+  async function setup(){
+    startBtn.style.display="none";
+    stopBtn.style.display="inline-flex";
+    trigLabel.textContent = "—";
+
+    try{
+      bhPreviewOnly = false;
+      try{
+        initBhapticsOrThrow();
+      }catch(e){
+        bhPreviewOnly = true;
+      }
+      statusTxt.textContent = bhPreviewOnly
+        ? "Preview mode: add bHaptics keys in CONFIG to feel the vest. Initializing camera + face mesh…"
+        : "Initializing camera + face mesh…";
+
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { width: 1280, height: 720, facingMode: "user" },
+        audio: false
+      });
+      video.srcObject = stream;
+      await new Promise(res => video.onloadedmetadata = res);
+      await video.play();
+
+      // Match canvas to video and make it crisp
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      fitCanvasToStage();
+
+      const fileset = await FilesetResolver.forVisionTasks(
+        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm"
+      );
+
+      faceLandmarker = await FaceLandmarker.createFromOptions(fileset, {
+        baseOptions: {
+          modelAssetPath: "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task",
+          delegate: "GPU"
+        },
+        outputFaceBlendshapes: true,
+        runningMode: "VIDEO",
+        numFaces: 1
+      });
+
+      running = true;
+      statusTxt.textContent = "Live. Blink & smile to play the vest.";
+      loop();
+    }catch(err){
+      statusTxt.textContent = "Error: " + (err?.message || err);
+      startBtn.style.display="inline-flex";
+      stopBtn.style.display="none";
+      stop();
+    }
+  }
+
+  function stop(){
+    running = false;
+    if (rafId) cancelAnimationFrame(rafId);
+    rafId = null;
+
+    const stream = video.srcObject;
+    if (stream && stream.getTracks) stream.getTracks().forEach(t => t.stop());
+    video.srcObject = null;
+
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    blinkFill.style.width="0%";
+    smileFill.style.width="0%";
+    blinkVal.textContent="0%";
+    smileVal.textContent="0%";
+    fpsLabel.textContent="—";
+    trigLabel.textContent="—";
+    blinkEma = 0; smileEma = 0;
+    blinkArmed = true; smileArmed = true;
+    lastMetrics = { blink: 0, smile: 0 };
+    smileGate = false;
+    if (trigTimeout) { clearTimeout(trigTimeout); trigTimeout = null; }
+
+    faceLandmarker = null;
+    startBtn.style.display="inline-flex";
+    stopBtn.style.display="none";
+    statusTxt.textContent = "Stopped.";
+  }
+
+  function loop(){
+    if (!running || !faceLandmarker) return;
+
+    const now = performance.now();
+    const res = faceLandmarker.detectForVideo(video, now);
+
+    // fps
+    fpsFrames++;
+    if (now - lastFpsT > 500){
+      fpsLabel.textContent = Math.round((fpsFrames * 1000) / (now - lastFpsT)).toString();
+      lastFpsT = now;
+      fpsFrames = 0;
+    }
+
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    if (res.faceLandmarks && res.faceLandmarks.length){
+      const d = new DrawingUtils(ctx);
+
+      // subtle mesh
+      for (const lm of res.faceLandmarks){
+        d.drawConnectors(lm, FaceLandmarker.FACE_LANDMARKS_TESSELATION, { color: "#C0C0C030", lineWidth: 1 });
+        d.drawConnectors(lm, FaceLandmarker.FACE_LANDMARKS_RIGHT_EYE, { color: "#00FFA2", lineWidth: 2 });
+        d.drawConnectors(lm, FaceLandmarker.FACE_LANDMARKS_LEFT_EYE,  { color: "#00FFA2", lineWidth: 2 });
+        d.drawConnectors(lm, FaceLandmarker.FACE_LANDMARKS_LIPS,      { color: "#40C8FF", lineWidth: 2 });
+      }
+
+      const bs0 = res.faceBlendshapes?.[0];
+      if (bs0?.categories?.length){
+        const shapes = bs0.categories;
+
+        const blinkL = getShapeScore(shapes, "eyeBlinkLeft");
+        const blinkR = getShapeScore(shapes, "eyeBlinkRight");
+        const smileL = getShapeScore(shapes, "mouthSmileLeft");
+        const smileR = getShapeScore(shapes, "mouthSmileRight");
+
+        const rawBlink = (blinkL + blinkR) / 2;
+        const rawSmile = (smileL + smileR) / 2;
+
+        // For calibration + UI
+        lastMetrics.blink = rawBlink;
+        lastMetrics.smile = rawSmile;
+
+        // Smooth the signal (prevents jittery triggers)
+        blinkEma = blinkEma ? (blinkEma * 0.65 + rawBlink * 0.35) : rawBlink;
+        smileEma = smileEma ? (smileEma * 0.70 + rawSmile * 0.30) : rawSmile;
+
+        blinkFill.style.width = (blinkEma*100).toFixed(1) + "%";
+        smileFill.style.width = (smileEma*100).toFixed(1) + "%";
+        blinkVal.textContent = Math.round(blinkEma*100) + "%";
+        smileVal.textContent = Math.round(smileEma*100) + "%";
+
+        const blinkThresh = +blinkTh.value;
+        const smileThresh = +smileTh.value;
+
+        // Hysteresis: require a "release" below the low threshold before re-arming
+        const blinkLow = clamp(blinkThresh - 0.18, 0.05, 0.90);
+        const smileLow = clamp(smileThresh - 0.12, 0.02, 0.90);
+
+        // triggers (blink uses time + hysteresis)
+        if (blinkArmed && blinkEma > blinkThresh && (now - lastBlink > 420)){
+          lastBlink = now;
+          blinkArmed = false;
+          setTrig("BLINK");
+          try{ hapticBlink(); }catch{}
+        } else if (!blinkArmed && blinkEma < blinkLow){
+          blinkArmed = true;
+        }
+
+        // smile is one-shot until you relax back below smileLow
+        if (smileArmed && smileEma > smileThresh){
+          smileArmed = false;
+          setTrig("SMILE");
+          hapticSmile().catch(()=>{});
+        } else if (!smileArmed && smileEma < smileLow){
+          smileArmed = true;
+        }
+      }
+    }
+
+    rafId = requestAnimationFrame(loop);
+  }
+
+  startBtn.addEventListener("click", setup);
+  stopBtn.addEventListener("click", stop);
+
+  // Initial message
+  if (!cfg.appId || !cfg.apiKey){
+    statusTxt.textContent = "CONFIG → add bHaptics keys → connect Player → START the instrument.";
+  } else {
+    statusTxt.textContent = "Keys loaded. Connect Player + vest → START the instrument.";
+  }
+
+</script>
+</body>
+</html>
